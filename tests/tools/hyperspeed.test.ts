@@ -157,6 +157,43 @@ describe('hyperspeed tools', () => {
       assert.strictEqual(parsed['actionsExecuted'], 2);
     });
 
+    it('returns observation when observeAfter is true', async () => {
+      const {page, context, response, args} = createHandlerMocks();
+      page.pptrPage.goto.resolves();
+      page.pptrPage.url.returns('https://example.com/next');
+      page.pptrPage.title.resolves('Next Page');
+      page.pptrPage.evaluate.resolves([
+        {
+          ref: '@0',
+          tag: 'button',
+          text: 'Next',
+          selector: '#next-btn',
+        },
+      ]);
+
+      await hyperAct(args).handler(
+        {
+          params: {
+            actions: [{type: 'navigate', url: 'https://example.com/next'}],
+            observeAfter: true,
+          },
+          page,
+        },
+        response,
+        context,
+      );
+
+      sinon.assert.calledOnce(response.appendResponseLine);
+      const arg = response.appendResponseLine.firstCall.args[0];
+      const parsed = JSON.parse(arg) as Record<string, unknown>;
+      assert.strictEqual(parsed['ok'], true);
+      assert.strictEqual(parsed['page'], 'Next Page');
+      assert.strictEqual(parsed['url'], 'https://example.com/next');
+      const elements = parsed['elements'] as Array<Record<string, unknown>>;
+      assert.strictEqual(elements.length, 1);
+      assert.strictEqual(elements[0]?.['ref'], '@0');
+    });
+
     it('executes actions with action-complete wait policy without delay', async () => {
       const {page} = createHandlerMocks();
       const results = await FastActionExecutor.executeBatch(

@@ -83,10 +83,9 @@ export const hyperAct: PageToolFactory = definePageTool(() => ({
     'PRIMARY HIGH-SPEED ACTION TOOL: Executes one or multiple browser ' +
     'actions (navigate, click, dblclick, fill, type, press_key, hover, ' +
     'scroll, select, check, upload, drag, wait, extract, evaluate, assert, ' +
-    'capture) in a single compound turn on the selected page. ALWAYS prefer ' +
-    'submitting a batch of known actions in a single hyper_act call instead ' +
-    'of multiple separate tool calls or repeated observations to eliminate ' +
-    'model round-trip latency.',
+    'capture) in a single compound turn on the selected page. Targets can be ' +
+    'CSS selectors, text="...", or @index refs from hyper_observe. Set ' +
+    'observeAfter=true to return the updated page elements in the same turn.',
   annotations: {
     category: ToolCategory.INPUT,
     readOnlyHint: false,
@@ -96,6 +95,13 @@ export const hyperAct: PageToolFactory = definePageTool(() => ({
       .array(actionItemSchema)
       .min(1)
       .describe('List of browser actions to execute sequentially.'),
+    observeAfter: zod
+      .boolean()
+      .optional()
+      .describe(
+        'If true, automatically scans and returns the updated page elements ' +
+          'immediately after actions finish, eliminating an extra observation turn.',
+      ),
     outputMode: outputModeSchema.optional(),
   },
   blockedByDialog: false,
@@ -106,12 +112,27 @@ export const hyperAct: PageToolFactory = definePageTool(() => ({
     const mode = parseOutputMode(request.params.outputMode);
     const results = await ActionExecutor.executeBatch(request.page, actions);
     const allSuccess = results.every(r => r.success);
+    let page: string | undefined;
+    let url: string | undefined;
+    let elements: unknown = undefined;
+    if (request.params.observeAfter) {
+      const observation = await ObservationEngine.observe(
+        request.page,
+        'minimal',
+      );
+      page = observation.title;
+      url = observation.url;
+      elements = observation.elements;
+    }
     const formatted = ResultFormatter.formatResult(
       {
         ok: allSuccess,
         pageId: request.page.id,
         actionsExecuted: results.length,
         results,
+        page,
+        url,
+        elements,
       },
       mode,
     );

@@ -26,6 +26,7 @@ export interface PageObservation {
   timestamp: number;
   summary?: string;
   elements?: Array<{
+    ref?: string;
     uid?: string;
     role?: string;
     name?: string;
@@ -101,7 +102,7 @@ export class ObservationEngine {
             const nodes = Array.from(document.querySelectorAll(query)).filter(
               isVisible,
             );
-            return nodes.slice(0, maxItems).map(el => {
+            return nodes.slice(0, maxItems).map((el, i) => {
               let sel = '';
               const id = el.id;
               if (id) {
@@ -141,25 +142,25 @@ export class ObservationEngine {
                 }
               }
               const role = el.getAttribute('role') || undefined;
+              const ariaLabel = el.getAttribute('aria-label');
+              const placeholder = el.getAttribute('placeholder');
               const name =
-                el.getAttribute('aria-label') ||
-                el.getAttribute('placeholder') ||
+                ariaLabel ||
+                placeholder ||
                 el.getAttribute('name') ||
                 undefined;
-              const rawText =
-                el.textContent ||
-                el.getAttribute('aria-label') ||
-                el.getAttribute('placeholder') ||
-                '';
+              const rawText = el.textContent || ariaLabel || placeholder || '';
               const text = rawText.trim().replace(/\s+/g, ' ').slice(0, 40);
               const val =
                 'value' in el && typeof el.value === 'string'
                   ? el.value.slice(0, 30)
                   : undefined;
+              const tag = el.tagName.toLowerCase();
               return {
-                tag: el.tagName.toLowerCase(),
-                role,
-                name,
+                ref: `@${i}`,
+                tag,
+                role: role !== tag ? role : undefined,
+                name: name !== text ? name : undefined,
                 text: text.length > 0 ? text : undefined,
                 value: val && val.length > 0 ? val : undefined,
                 selector: sel,
