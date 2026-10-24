@@ -17,13 +17,23 @@ export class SlimMcpResponse extends McpResponse {
     const responseText = error
       ? [...this.responseLines, `Error: ${error.message}`].join('\n')
       : this.responseLines.join('\n');
-    const text: TextContent = {
-      type: 'text',
-      text: responseText,
-    };
+    const content: Array<TextContent | ImageContent> = [];
+    if (responseText.length > 0) {
+      content.push({
+        type: 'text',
+        text: responseText,
+      });
+    }
+    for (const img of this.images) {
+      content.push({
+        type: 'image',
+        data: img.data,
+        mimeType: img.mimeType,
+      });
+    }
     return {
-      content: [text],
-      structuredContent: text,
+      content,
+      structuredContent: content[0] ?? {type: 'text', text: ''},
     };
   }
 }

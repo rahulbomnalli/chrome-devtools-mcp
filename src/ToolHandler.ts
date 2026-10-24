@@ -508,9 +508,10 @@ export class ToolHandler {
     let pageUrl: string | undefined;
     try {
       logger?.(`${tool.name} request: ${JSON.stringify(params, null, '  ')}`);
-      const response = isSlimTool(tool)
-        ? new SlimMcpResponse(this.#config)
-        : new McpResponse(this.#config);
+      const response =
+        isSlimTool(tool) || isFastTool(tool)
+          ? new SlimMcpResponse(this.#config)
+          : new McpResponse(this.#config);
       const {content, structuredContent} = isBrowserlessTool(tool)
         ? await this.#runBrowserlessTool(tool, params, response, context)
         : await this.#runBrowserTool(
