@@ -12,6 +12,7 @@ import * as consoleTools from './console.js';
 import * as cssTools from './css.js';
 import * as emulationTools from './emulation.js';
 import * as extensionTools from './extensions.js';
+import * as hyperTools from './hyperspeed.js';
 import * as inputTools from './input.js';
 import * as lighthouseTools from './lighthouse.js';
 import * as memoryTools from './memory.js';
@@ -25,7 +26,7 @@ import * as scriptTools from './script.js';
 import * as slimTools from './slim/tools.js';
 import * as snapshotTools from './snapshot.js';
 import * as thirdPartyDeveloperTools from './thirdPartyDeveloper.js';
-import type {AnyToolDefinition} from './ToolDefinition.js';
+import {isFastTool, type AnyToolDefinition} from './ToolDefinition.js';
 import * as webauthnTools from './webauthn.js';
 import * as webmcpTools from './webmcp.js';
 
@@ -36,6 +37,7 @@ export const createTools = (args: ParsedArguments): AnyToolDefinition[] => {
     ...Object.values(cssTools),
     ...Object.values(emulationTools),
     ...Object.values(extensionTools),
+    ...Object.values(hyperTools),
     ...Object.values(inputTools),
     ...Object.values(lighthouseTools),
     ...Object.values(memoryTools),
@@ -55,7 +57,11 @@ export const createTools = (args: ParsedArguments): AnyToolDefinition[] => {
 
   const tools: AnyToolDefinition[] = [];
   for (const tool of rawTools) {
-    tools.push(tool(args));
+    const def = tool(args);
+    if (args.fast && !isFastTool(def)) {
+      continue;
+    }
+    tools.push(def);
   }
 
   tools.sort((a, b) => a.name.localeCompare(b.name));

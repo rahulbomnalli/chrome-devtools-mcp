@@ -1396,5 +1396,356 @@
         "argType": "boolean"
       }
     ]
+  },
+  {
+    "name": "hyper_act",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "actions_count",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_benchmark",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_bulk_extract",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "item_selector_length",
+        "argType": "number"
+      },
+      {
+        "name": "field_selectors_length",
+        "argType": "number"
+      },
+      {
+        "name": "max_items",
+        "argType": "number"
+      },
+      {
+        "name": "pagination_selector_length",
+        "argType": "number"
+      },
+      {
+        "name": "max_pages",
+        "argType": "number"
+      },
+      {
+        "name": "infinite_scroll",
+        "argType": "boolean"
+      },
+      {
+        "name": "scroll_rounds",
+        "argType": "number"
+      },
+      {
+        "name": "export_path_length",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_console_watch",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "types_count",
+        "argType": "number"
+      },
+      {
+        "name": "pattern_length",
+        "argType": "number"
+      },
+      {
+        "name": "limit",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_debug_capture",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "dom_selector_length",
+        "argType": "number"
+      },
+      {
+        "name": "screenshot_path_length",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_download_manager",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "action",
+        "argType": "string"
+      },
+      {
+        "name": "download_path_length",
+        "argType": "number"
+      },
+      {
+        "name": "expected_filename_length",
+        "argType": "number"
+      },
+      {
+        "name": "timeout_ms",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_execute_plan",
+    "args": [
+      {
+        "name": "plan_id_length",
+        "argType": "number"
+      },
+      {
+        "name": "steps_count",
+        "argType": "number"
+      },
+      {
+        "name": "variables_length",
+        "argType": "number"
+      },
+      {
+        "name": "timeout_ms",
+        "argType": "number"
+      },
+      {
+        "name": "max_concurrency",
+        "argType": "number"
+      },
+      {
+        "name": "dry_run",
+        "argType": "boolean"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_network_export",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "file_path_length",
+        "argType": "number"
+      },
+      {
+        "name": "url_pattern_length",
+        "argType": "number"
+      },
+      {
+        "name": "methods_count",
+        "argType": "number"
+      },
+      {
+        "name": "status_codes_count",
+        "argType": "number"
+      },
+      {
+        "name": "resource_types_count",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_network_intercept",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "rules_count",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_network_watch",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "url_pattern_length",
+        "argType": "number"
+      },
+      {
+        "name": "methods_count",
+        "argType": "number"
+      },
+      {
+        "name": "status_codes_count",
+        "argType": "number"
+      },
+      {
+        "name": "resource_types_count",
+        "argType": "number"
+      },
+      {
+        "name": "limit",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_observe",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "mode",
+        "argType": "string"
+      },
+      {
+        "name": "target_length",
+        "argType": "number"
+      },
+      {
+        "name": "file_path_length",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_parallel",
+    "args": [
+      {
+        "name": "tasks_count",
+        "argType": "number"
+      },
+      {
+        "name": "max_concurrency",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_recover",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "action_type",
+        "argType": "string"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_session_status",
+    "args": [
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
+  },
+  {
+    "name": "hyper_wait_for",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "condition_length",
+        "argType": "number"
+      },
+      {
+        "name": "output_mode",
+        "argType": "string"
+      }
+    ]
   }
 ]

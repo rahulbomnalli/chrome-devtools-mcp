@@ -20,6 +20,33 @@ automation, in-depth debugging, and performance analysis.
 - **Reliable automation**. Uses
   [puppeteer](https://github.com/puppeteer/puppeteer) to automate actions in
   Chrome and automatically wait for action results.
+- **HyperSpeed Engine**: High-velocity, compound browser automation engine
+  reducing round-trip latency by up to 9x and LLM token overhead by >90%
+  via in-engine DAG scheduling (`hyper_execute_plan`), same-page batching
+  (`hyper_act`), multi-tab parallel tasks (`hyper_parallel`), and ring-buffered
+  diagnostics (`hyper_network_watch`, `hyper_console_watch`). See
+  [Benchmark Report](docs/hyperspeed-benchmark.md) and
+  [Windows 11 Setup](docs/windows-setup.md).
+
+### HyperSpeed Tools Overview
+
+| Tool                      | Capability                                                   | Typical Speedup     |
+| :------------------------ | :----------------------------------------------------------- | :------------------ |
+| `hyper_act`               | Batched same-page actions (click, fill, type, wait, assert)  | 7.8x faster         |
+| `hyper_execute_plan`      | Multi-page workflow DAG with variable bindings & branching   | 8-10x faster        |
+| `hyper_parallel`          | Independent cross-tab concurrency with pool limits           | 3.1x throughput     |
+| `hyper_observe`           | Targeted, semantic, or diff observation (replaces DOM dumps) | -85% tokens         |
+| `hyper_wait_for`          | Event-driven waits (DOM, network, URL, dialog) without sleep | Instant reaction    |
+| `hyper_bulk_extract`      | Structured pagination and infinite-scroll extraction         | 15.2x faster        |
+| `hyper_download_manager`  | Chrome CDP download directory configuration & verification   | Deterministic       |
+| `hyper_network_watch`     | Filtered ring-buffered HTTP monitoring with header redaction | Memory-bounded      |
+| `hyper_network_export`    | Export filtered network traffic to structured JSON           | Zero inline bloat   |
+| `hyper_network_intercept` | Target-scoped request blocking, mock headers, or redirection | Local interception  |
+| `hyper_console_watch`     | Filtered, deduplicated browser console & error tracking      | Instant diagnostics |
+| `hyper_debug_capture`     | Synchronized bundle of URL, DOM excerpt, errors, screenshot  | On-failure bundle   |
+| `hyper_recover`           | Auto-recovery from stale locators, dialogs, or navigation    | Zero agent loops    |
+| `hyper_benchmark`         | Built-in reproducible latency and token benchmarking         | Automated stats     |
+| `hyper_session_status`    | Connection health check and browser target diagnostics       | Fast status         |
 
 ## Disclaimers
 

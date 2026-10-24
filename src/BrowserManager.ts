@@ -28,6 +28,38 @@ export interface BrowserManagerOptions {
   logFile?: fs.WriteStream;
 }
 
+function findActiveChromeWSEndpoint(): string | undefined {
+  const home = os.homedir();
+  const candidates = [
+    path.join(home, 'AppData', 'Local', 'Google', 'Chrome', 'User Data'),
+    path.join(home, 'Library', 'Application Support', 'Google', 'Chrome'),
+    path.join(home, '.config', 'google-chrome'),
+  ];
+  for (const dir of candidates) {
+    const portPath = path.join(dir, 'DevToolsActivePort');
+    try {
+      if (fs.existsSync(portPath)) {
+        const fileContent = fs.readFileSync(portPath, 'utf8');
+        const lines = fileContent
+          .split('\n')
+          .map(l => l.trim())
+          .filter(Boolean);
+        const rawPort = lines[0];
+        const rawPath = lines[1];
+        if (rawPort && rawPath) {
+          const port = parseInt(rawPort, 10);
+          if (!isNaN(port) && port > 0 && port <= 65535) {
+            return `ws://127.0.0.1:${port}${rawPath}`;
+          }
+        }
+      }
+    } catch {
+      // Continue to next candidate
+    }
+  }
+  return undefined;
+}
+
 /**
  * Identity token for an in-flight connect/launch attempt. Instances carry no
  * data and are never inspected structurally — only ever compared by
@@ -204,6 +236,18 @@ export class BrowserManager {
       this.#config.resolved.autoConnect
     ) {
       return await this.#connect();
+    }
+    // Auto-discover active running Chrome with user profile unless isolated or custom userDataDir
+    if (!this.#config.resolved.isolated && !this.#config.resolved.userDataDir) {
+      const activeEndpoint = findActiveChromeWSEndpoint();
+      if (activeEndpoint) {
+        try {
+          const connected = await this.#connectToEndpoint(activeEndpoint);
+          return connected;
+        } catch {
+          // If active port connection failed, fall through to launch
+        }
+      }
     }
     return await this.#launch();
   }
@@ -443,6 +487,35 @@ export class BrowserManager {
         },
       );
     }
+  }
+
+  async #connectToEndpoint(endpoint: string): Promise<Browser> {
+    const {
+      wsHeaders,
+      blockedUrlPattern: blocklist,
+      allowedUrlPattern: allowlist,
+      categoryExtensions: enableExtensions,
+    } = this.#config.resolved;
+
+    const connectOptions: Parameters<typeof puppeteer.connect>[0] = {
+      browserWSEndpoint: endpoint,
+      targetFilter: BrowserManager.makeTargetFilter(enableExtensions),
+      defaultViewport: null,
+      handleDevToolsAsPage: true,
+      blocklist,
+      allowlist,
+      logger: puppeteerLogger,
+      wsOptions: {
+        keepAlive: true,
+        headers: wsHeaders,
+      },
+    };
+
+    const connected = await puppeteer.connect(connectOptions);
+    this.#browserMode = 'connected';
+    this.#browser = connected;
+    connected.once('disconnected', () => this.#evictIfCurrent(connected));
+    return connected;
   }
 
   /**

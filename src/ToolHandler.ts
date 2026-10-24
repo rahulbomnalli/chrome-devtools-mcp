@@ -23,6 +23,7 @@ import {categoryToFlagName} from './config/category-options.js';
 import {
   isAvailableInMode,
   isBrowserlessTool,
+  isFastTool,
   isPageScopedTool,
   isSlimTool,
   type AnyToolDefinition,
@@ -72,6 +73,12 @@ function getDisabledReason(
   tool: AnyToolDefinition,
   serverArgs: ParsedArguments,
 ): string | undefined {
+  if (serverArgs.fast) {
+    return isFastTool(tool)
+      ? undefined
+      : `Tool ${tool.name} is not available with --fast.`;
+  }
+
   if (!isAvailableInMode(tool, serverArgs)) {
     return isSlimTool(tool)
       ? `Tool ${tool.name} is only available with --slim.`

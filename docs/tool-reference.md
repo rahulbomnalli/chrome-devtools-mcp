@@ -2,19 +2,24 @@
 
 # Chrome DevTools MCP Tool Reference
 
-- **[Input automation](#input-automation)** (10 tools)
+- **[Input automation](#input-automation)** (12 tools)
   - [`click`](#click)
   - [`drag`](#drag)
   - [`fill`](#fill)
   - [`fill_form`](#fill_form)
   - [`handle_dialog`](#handle_dialog)
   - [`hover`](#hover)
+  - [`hyper_act`](#hyper_act)
+  - [`hyper_bulk_extract`](#hyper_bulk_extract)
   - [`press_key`](#press_key)
   - [`type_text`](#type_text)
   - [`upload_file`](#upload_file)
   - [`click_at`](#click_at)
-- **[Navigation automation](#navigation-automation)** (6 tools)
+- **[Navigation automation](#navigation-automation)** (9 tools)
   - [`close_page`](#close_page)
+  - [`hyper_execute_plan`](#hyper_execute_plan)
+  - [`hyper_parallel`](#hyper_parallel)
+  - [`hyper_wait_for`](#hyper_wait_for)
   - [`list_pages`](#list_pages)
   - [`navigate_page`](#navigate_page)
   - [`new_page`](#new_page)
@@ -27,13 +32,23 @@
   - [`performance_analyze_insight`](#performance_analyze_insight)
   - [`performance_start_trace`](#performance_start_trace)
   - [`performance_stop_trace`](#performance_stop_trace)
-- **[Network](#network)** (2 tools)
+- **[Network](#network)** (6 tools)
   - [`get_network_request`](#get_network_request)
+  - [`hyper_download_manager`](#hyper_download_manager)
+  - [`hyper_network_export`](#hyper_network_export)
+  - [`hyper_network_intercept`](#hyper_network_intercept)
+  - [`hyper_network_watch`](#hyper_network_watch)
   - [`list_network_requests`](#list_network_requests)
-- **[Debugging](#debugging)** (9 tools)
+- **[Debugging](#debugging)** (15 tools)
   - [`evaluate_script`](#evaluate_script)
   - [`get_console_message`](#get_console_message)
   - [`get_css_styles`](#get_css_styles)
+  - [`hyper_benchmark`](#hyper_benchmark)
+  - [`hyper_console_watch`](#hyper_console_watch)
+  - [`hyper_debug_capture`](#hyper_debug_capture)
+  - [`hyper_observe`](#hyper_observe)
+  - [`hyper_recover`](#hyper_recover)
+  - [`hyper_session_status`](#hyper_session_status)
   - [`lighthouse_audit`](#lighthouse_audit)
   - [`list_console_messages`](#list_console_messages)
   - [`screencast_start`](#screencast_start)
@@ -152,6 +167,37 @@
 
 ---
 
+### `hyper_act`
+
+**Description:** PRIMARY HIGH-SPEED ACTION TOOL: Executes one or multiple browser actions (navigate, [`click`](#click), dblclick, [`fill`](#fill), type, [`press_key`](#press_key), [`hover`](#hover), scroll, select, check, upload, [`drag`](#drag), wait, extract, evaluate, assert, capture) in a single compound turn on the selected page. ALWAYS prefer submitting a batch of known actions in a single [`hyper_act`](#hyper_act) call instead of multiple separate tool calls or repeated observations to eliminate model round-trip latency.
+
+**Parameters:**
+
+- **actions** (array) **(required)**: List of browser actions to execute sequentially.
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+
+---
+
+### `hyper_bulk_extract`
+
+**Description:** Extracts large structured datasets with pagination, infinite scroll, and CSV/JSON export.
+
+**Parameters:**
+
+- **itemSelector** (string) **(required)**: CSS selector for each item element.
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **exportPath** (string) _(optional)_
+- **fieldSelectors** (string) _(optional)_: JSON-formatted mapping of field name to inner CSS selector.
+- **infiniteScroll** (boolean) _(optional)_
+- **maxItems** (number) _(optional)_
+- **maxPages** (number) _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **paginationSelector** (string) _(optional)_
+- **scrollRounds** (number) _(optional)_
+
+---
+
 ### `press_key`
 
 **Description:** Press a key or key combination. Use this when other input methods like [`fill`](#fill)() cannot be used (e.g., keyboard shortcuts, navigation keys, or special key combinations).
@@ -212,6 +258,46 @@
 **Parameters:**
 
 - **pageId** (number) **(required)**: The ID of the page to close. Call [`list_pages`](#list_pages) to list pages.
+
+---
+
+### `hyper_execute_plan`
+
+**Description:** PRIMARY WORKFLOW ENGINE: Compiles and executes a complete multi-step, multi-tab workflow plan with step dependencies, variable bindings, and conditional branching in a single MCP call. Use this when the sequence of tasks across tabs or pages is known instead of orchestrating turn-by-turn.
+
+**Parameters:**
+
+- **planId** (string) **(required)**: Unique ID for this workflow plan.
+- **steps** (array) **(required)**: Workflow steps to execute.
+- **dryRun** (boolean) _(optional)_
+- **maxConcurrency** (number) _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **timeoutMs** (number) _(optional)_: Total plan timeout in ms.
+- **variables** (string) _(optional)_: JSON-formatted initial variable bindings.
+
+---
+
+### `hyper_parallel`
+
+**Description:** Executes multiple independent subplans concurrently across different pages.
+
+**Parameters:**
+
+- **tasks** (array) **(required)**
+- **maxConcurrency** (number) _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+
+---
+
+### `hyper_wait_for`
+
+**Description:** Event-driven synchronization for DOM, network, and navigation conditions.
+
+**Parameters:**
+
+- **condition** (string) **(required)**: JSON-formatted wait condition configuration.
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
 
 ---
 
@@ -364,6 +450,65 @@
 
 ---
 
+### `hyper_download_manager`
+
+**Description:** Configures Chrome download behavior and verifies completed files.
+
+**Parameters:**
+
+- **action** (enum: "configure", "wait") **(required)**
+- **downloadPath** (string) **(required)**: Target download directory.
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **expectedFilename** (string) _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **timeoutMs** (number) _(optional)_
+
+---
+
+### `hyper_network_export`
+
+**Description:** Exports filtered network activity to a structured JSON file.
+
+**Parameters:**
+
+- **filePath** (string) **(required)**: Output file path for the export.
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **methods** (array) _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **resourceTypes** (array) _(optional)_
+- **statusCodes** (array) _(optional)_
+- **urlPattern** (string) _(optional)_
+
+---
+
+### `hyper_network_intercept`
+
+**Description:** Configures scoped network request blocking, mocking, and header modifications.
+
+**Parameters:**
+
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **rules** (array) **(required)**
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+
+---
+
+### `hyper_network_watch`
+
+**Description:** Captures ring-buffered network activity with credential redaction and filtering.
+
+**Parameters:**
+
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **limit** (number) _(optional)_
+- **methods** (array) _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **resourceTypes** (array) _(optional)_
+- **statusCodes** (array) _(optional)_
+- **urlPattern** (string) _(optional)_
+
+---
+
 ### `list_network_requests`
 
 **Description:** Lists the most recent requests for the target page since the last navigation.
@@ -425,6 +570,80 @@ Results are paginated (10 rules per page by default); use pageIdx to page throug
 - **uid** (string) **(required)**: The uid of the element on the page from the page content snapshot to inspect CSS styles for
 - **pageIdx** (integer) _(optional)_: Page number to return (0-based). Defaults to 0 (the first page).
 - **pageSize** (integer) _(optional)_: Maximum number of CSS rules to return per page. Defaults to 10.
+
+---
+
+### `hyper_benchmark`
+
+**Description:** Runs performance benchmarks comparing standard tools against HyperSpeed execution.
+
+**Parameters:**
+
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+
+---
+
+### `hyper_console_watch`
+
+**Description:** Monitors browser console logs with type filtering, regex matching, and deduplication.
+
+**Parameters:**
+
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **limit** (number) _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **pattern** (string) _(optional)_
+- **types** (array) _(optional)_
+
+---
+
+### `hyper_debug_capture`
+
+**Description:** Captures consolidated diagnostics (DOM excerpt, console errors, failed network, screenshot).
+
+**Parameters:**
+
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **domSelector** (string) _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **screenshotPath** (string) _(optional)_
+
+---
+
+### `hyper_observe`
+
+**Description:** Optimized selective page observation. Use only when element targets or state are genuinely unknown. Modes: "minimal", "semantic", "targeted", "diff", "visual", "diagnostic". Do NOT call [`hyper_observe`](#hyper_observe) before or between [`hyper_act`](#hyper_act) actions when targets and expected conditions are already known.
+
+**Parameters:**
+
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **filePath** (string) _(optional)_
+- **mode** (enum: "minimal", "semantic", "targeted", "diff", "full", "visual", "diagnostic") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **target** (string) _(optional)_: Target CSS selector or JSON locator for targeted observation.
+
+---
+
+### `hyper_recover`
+
+**Description:** Attempts automatic recovery from common browser errors (unexpected dialogs, detached nodes).
+
+**Parameters:**
+
+- **actionType** (enum: "dismissDialog", "reload", "reconnect") **(required)**
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+
+---
+
+### `hyper_session_status`
+
+**Description:** Reports persistent browser connection status, target list, and performance metrics.
+
+**Parameters:**
+
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
 
 ---
 

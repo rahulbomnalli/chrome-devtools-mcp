@@ -234,6 +234,11 @@ The Chrome DevTools MCP server supports the following configuration option:
   - **Type:** boolean
   - **Default:** `false`
 
+- **`--fast`**
+  Exposes an ultra-fast subset of core HyperSpeed tools (hyper_act, hyper_execute_plan, hyper_observe, hyper_wait_for, navigate_page, evaluate_script, take_screenshot, list_pages, select_page, new_page, close_page) reducing MCP tool schema by 96% for sub-second agent turns.
+  - **Type:** boolean
+  - **Default:** `false`
+
 - **`--redactNetworkHeaders`/ `--redact-network-headers`**
   If true, redacts some of the network headers considered sensitive before returning to the client.
   - **Type:** boolean

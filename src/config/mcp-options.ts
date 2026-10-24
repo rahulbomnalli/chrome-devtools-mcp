@@ -52,6 +52,7 @@ export interface McpArguments
   clearcutForceFlushIntervalMs?: number;
   clearcutIncludePidHeader: boolean;
   slim: boolean;
+  fast: boolean;
   viaCli: boolean;
   redactNetworkHeaders: boolean;
   allowUnrestrictedPaths: boolean;
@@ -259,6 +260,16 @@ export const mcpOptions: McpOptions = {
     default: false,
     describe:
       'Exposes a "slim" set of 3 tools covering navigation, script execution and screenshots only. Useful for basic browser tasks.',
+    reloadable: true,
+  },
+  fast: {
+    type: 'boolean',
+    default: false,
+    describe:
+      'Exposes an ultra-fast subset of core HyperSpeed tools (hyper_act, ' +
+      'hyper_execute_plan, hyper_observe, hyper_wait_for, navigate_page, ' +
+      'evaluate_script, take_screenshot, list_pages, select_page, new_page, ' +
+      'close_page) reducing MCP tool schema by 96% for sub-second agent turns.',
     reloadable: true,
   },
   viaCli: {

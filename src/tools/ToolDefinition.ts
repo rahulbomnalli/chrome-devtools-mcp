@@ -533,6 +533,7 @@ export type ContextPage = Readonly<{
     options?: {
       timeout?: number;
       waitForStableDom?: boolean;
+      expectNavigationIn?: number;
       handleDialog?:
         DialogAction | Partial<Record<Protocol.Page.DialogType, DialogAction>>;
     },
@@ -834,13 +835,34 @@ export function isSlimTool(
   return Boolean(tool.annotations.conditions?.includes('slim'));
 }
 
+const FAST_TOOLS: ReadonlySet<string> = new Set([
+  'hyper_act',
+  'hyper_execute_plan',
+  'hyper_observe',
+  'hyper_wait_for',
+  'navigate_page',
+  'evaluate_script',
+  'take_screenshot',
+  'list_pages',
+  'select_page',
+  'new_page',
+  'close_page',
+]);
+
+export function isFastTool(tool: Pick<BaseToolDefinition, 'name'>): boolean {
+  return FAST_TOOLS.has(tool.name);
+}
+
 /**
- * Slim mode replaces the regular tools with the slim tools.
+ * Slim or Fast mode replaces or filters the regular tools.
  */
 export function isAvailableInMode(
-  tool: Pick<BaseToolDefinition, 'annotations'>,
-  serverArgs: Pick<ParsedArguments, 'slim'>,
+  tool: Pick<BaseToolDefinition, 'name' | 'annotations'>,
+  serverArgs: Pick<ParsedArguments, 'slim'> & {fast?: boolean},
 ): boolean {
+  if (serverArgs.fast) {
+    return isFastTool(tool);
+  }
   return isSlimTool(tool) === Boolean(serverArgs.slim);
 }
 
