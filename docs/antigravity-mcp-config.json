@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "chrome-devtools-hyperspeed": {
+      "command": "C:/Program Files/nodejs/node.exe",
+      "args": [
+        "c:/Users/91973/Desktop/chrome-devtools-mcp-main/build/src/bin/chrome-devtools-mcp.js",
+        "--isolated"
+      ]
+    }
+  }
+}

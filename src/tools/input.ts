@@ -238,6 +238,7 @@ export const hover: PageToolFactory = definePageTool(() => ({
         async signal => {
           await handle.asLocator().hover({signal});
         },
+        {waitForStableDom: false, expectNavigationIn: 0},
       );
       response.appendResponseLine(`Successfully hovered over the element`);
       response.attachWaitForResult(result);
@@ -332,64 +333,72 @@ async function fillFormElements(
 ): Promise<{result?: WaitForEventsResult; interruptedUid?: string}> {
   let currentUid: string | undefined;
   try {
-    const result = await page.waitForEventsAfterAction(async signal => {
-      for (const {uid, value} of elements) {
-        const previousUid = currentUid;
-        currentUid = undefined;
-        using handle = await raceWithSignal(
-          page.getElementByUid(uid),
-          signal,
-        ).catch(error => {
-          if (signal.aborted && previousUid) {
-            currentUid = previousUid;
-          }
-          throw error;
-        });
-        currentUid = uid;
-        const aXNode = page.getAXNodeByUid(uid);
-        // We assume that combobox needs to be handled as select if it has
-        // role='combobox' and option children.
-        if (aXNode && aXNode.role === 'combobox' && hasOptionChildren(aXNode)) {
-          await raceWithSignal(
-            selectOption(handle, aXNode, value, signal),
+    const result = await page.waitForEventsAfterAction(
+      async signal => {
+        for (const {uid, value} of elements) {
+          const previousUid = currentUid;
+          currentUid = undefined;
+          using handle = await raceWithSignal(
+            page.getElementByUid(uid),
             signal,
-          );
-        } else {
-          const isToggle = await raceWithSignal(
-            handle.evaluate(el => {
-              if (el instanceof HTMLInputElement) {
-                return el.type === 'checkbox' || el.type === 'radio';
-              }
-              const role = el.getAttribute('role');
-              return (
-                role === 'checkbox' || role === 'radio' || role === 'switch'
-              );
-            }),
-            signal,
-          );
-
-          if (isToggle) {
-            if (['true', 'false'].includes(value)) {
-              await handle.asLocator().fill(value === 'true', {signal});
-            } else {
-              throw new Error(
-                `Checkboxes, radio boxes and toggles require "true" or "false" value, but ${value} was used`,
-              );
+          ).catch(error => {
+            if (signal.aborted && previousUid) {
+              currentUid = previousUid;
             }
+            throw error;
+          });
+          currentUid = uid;
+          const aXNode = page.getAXNodeByUid(uid);
+          // We assume that combobox needs to be handled as select if it has
+          // role='combobox' and option children.
+          if (
+            aXNode &&
+            aXNode.role === 'combobox' &&
+            hasOptionChildren(aXNode)
+          ) {
+            await raceWithSignal(
+              selectOption(handle, aXNode, value, signal),
+              signal,
+            );
           } else {
-            // Increase timeout for longer input values.
-            const timeoutPerChar = 10; // ms
-            const fillTimeout =
-              page.pptrPage.getDefaultTimeout() + value.length * timeoutPerChar;
-            await handle
-              .asLocator()
-              .setTimeout(fillTimeout)
-              .fill(value, {signal});
+            const isToggle = await raceWithSignal(
+              handle.evaluate(el => {
+                if (el instanceof HTMLInputElement) {
+                  return el.type === 'checkbox' || el.type === 'radio';
+                }
+                const role = el.getAttribute('role');
+                return (
+                  role === 'checkbox' || role === 'radio' || role === 'switch'
+                );
+              }),
+              signal,
+            );
+
+            if (isToggle) {
+              if (['true', 'false'].includes(value)) {
+                await handle.asLocator().fill(value === 'true', {signal});
+              } else {
+                throw new Error(
+                  `Checkboxes, radio boxes and toggles require "true" or "false" value, but ${value} was used`,
+                );
+              }
+            } else {
+              // Increase timeout for longer input values.
+              const timeoutPerChar = 10; // ms
+              const fillTimeout =
+                page.pptrPage.getDefaultTimeout() +
+                value.length * timeoutPerChar;
+              await handle
+                .asLocator()
+                .setTimeout(fillTimeout)
+                .fill(value, {signal});
+            }
           }
+          signal.throwIfAborted();
         }
-        signal.throwIfAborted();
-      }
-    });
+      },
+      {waitForStableDom: false, expectNavigationIn: 0},
+    );
     return {result};
   } catch (error) {
     if (!currentUid) {

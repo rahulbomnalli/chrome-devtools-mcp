@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "planId": "research-and-extract-demo",
+  "timeoutMs": 30000,
+  "outputPolicy": "compact",
+  "steps": [
+    {
+      "id": "open-page",
+      "type": "navigate",
+      "pageId": 1,
+      "url": "https://example.com"
+    },
+    {
+      "id": "verify-heading",
+      "type": "assert",
+      "dependsOn": ["open-page"],
+      "pageId": 1,
+      "condition": {
+        "kind": "elementVisible",
+        "target": {
+          "css": "h1"
+        }
+      }
+    },
+    {
+      "id": "extract-title",
+      "type": "extract",
+      "dependsOn": ["verify-heading"],
+      "pageId": 1,
+      "target": {
+        "css": "h1"
+      },
+      "as": "pageTitle"
+    },
+    {
+      "id": "extract-description",
+      "type": "extract",
+      "dependsOn": ["verify-heading"],
+      "pageId": 1,
+      "target": {
+        "css": "p"
+      },
+      "as": "pageDescription"
+    },
+    {
+      "id": "assert-content",
+      "type": "assert",
+      "dependsOn": ["extract-title"],
+      "pageId": 1,
+      "condition": {
+        "kind": "nonEmpty",
+        "valueRef": "pageTitle"
+      }
+    }
+  ]
+}
