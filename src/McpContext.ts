@@ -593,9 +593,9 @@ export class McpContext implements Context, BrowserlessContext {
         ctx = await this.browser.createBrowserContext();
         this.#isolatedContexts.set(isolatedContextName, ctx);
       }
-      page = await ctx.newPage({background});
+      page = await ctx.newPage({background, type: 'window'});
     } else {
-      page = await this.browser.newPage({background});
+      page = await this.browser.newPage({background, type: 'window'});
     }
     const mcpPage = this.#createMcpPage(page.target());
     await mcpPage.init({emulateFocus: true});
@@ -744,7 +744,12 @@ export class McpContext implements Context, BrowserlessContext {
   getPageById(pageId: number): McpPage {
     const page = this.#mcpPages.values().find(mcpPage => mcpPage.id === pageId);
     if (!page) {
-      throw new Error('No page found');
+      const available = Array.from(this.#mcpPages.values())
+        .map(p => `[${p.id}] ${p.url()}`)
+        .join(', ');
+      throw new Error(
+        `No page found: page with id ${pageId} does not exist. Available pages: ${available || 'none'}`,
+      );
     }
     return page;
   }

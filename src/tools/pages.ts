@@ -156,6 +156,7 @@ export const newPage: ToolFactory = defineTool((args: ParsedArguments) => {
           async () => {
             await page.pptrPage.goto(request.params.url, {
               timeout: request.params.timeout,
+              waitUntil: args?.fast ? 'domcontentloaded' : undefined,
             });
           },
           {timeout: request.params.timeout},
@@ -235,6 +236,7 @@ export const navigatePage: PageToolFactory = definePageTool(
         const page = request.page;
         const options = {
           timeout: request.params.timeout,
+          waitUntil: args?.fast ? ('domcontentloaded' as const) : undefined,
         };
 
         if (!request.params.type && !request.params.url) {

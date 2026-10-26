@@ -6,6 +6,10 @@
 
 import type {OutputMode} from './types.js';
 
+function isRecord(val: unknown): val is Record<string, unknown> {
+  return typeof val === 'object' && val !== null;
+}
+
 export class ResultFormatter {
   static formatResult(
     payload: Record<string, unknown>,
@@ -23,6 +27,44 @@ export class ResultFormatter {
           minimal['pageId'] = payload['pageId'];
         }
         return JSON.stringify(minimal);
+      }
+
+      case 'dense': {
+        const lines: string[] = [];
+        const ok = payload['ok'] !== false;
+        const pageId = payload['pageId'];
+        const title = payload['page'] ?? payload['title'];
+        const url = payload['url'];
+        const actionsCount = payload['actionsExecuted'];
+        const status = ok ? 'OK' : 'FAIL';
+
+        if (title || url) {
+          const idPrefix = pageId !== undefined ? `Page ${pageId}: ` : '';
+          lines.push(`[${idPrefix}"${title ?? ''}" | ${url ?? ''}]`);
+        }
+        if (actionsCount !== undefined) {
+          lines.push(`${status}: ${actionsCount} action(s) executed`);
+        }
+
+        const elements = payload['elements'];
+        if (Array.isArray(elements)) {
+          for (const item of elements) {
+            if (isRecord(item)) {
+              const ref = item['ref'] ? String(item['ref']) : '';
+              const tag = item['tag'] ? String(item['tag']) : 'el';
+              const rawName =
+                item['name'] || item['text'] || item['value'] || '';
+              const textVal = rawName ? ` "${String(rawName)}"` : '';
+              const sel = item['selector'] ? ` (${item['selector']})` : '';
+              lines.push(`${ref} ${tag}${textVal}${sel}`.trim());
+            }
+          }
+        }
+
+        if (lines.length === 0) {
+          return JSON.stringify(payload);
+        }
+        return lines.join('\n');
       }
 
       case 'compact': {

@@ -612,10 +612,11 @@ export function definePageTool<Schema extends ToolSchema>(
 ): PageToolFactory<Schema> {
   return (args: ParsedArguments): DefinedPageTool<Schema> => {
     const tool = definition(args);
+    const routingSchema = args.fast ? optionalPageIdSchema : pageIdSchema;
     return {
       ...tool,
       schema: {
-        ...(args.pageIdRouting && !isSlimTool(tool) ? pageIdSchema : {}),
+        ...(args.pageIdRouting && !isSlimTool(tool) ? routingSchema : {}),
         ...tool.schema,
       },
       pageScoped: true,
@@ -690,6 +691,17 @@ export const pageIdSchema: {
   pageId: zod.ZodNumber;
 } = {
   pageId: zod.number().describe('Targets a specific page by ID.'),
+};
+
+export const optionalPageIdSchema: {
+  pageId: zod.ZodOptional<zod.ZodNumber>;
+} = {
+  pageId: zod
+    .number()
+    .optional()
+    .describe(
+      'Targets a specific page by ID. When omitted, targets the selected page.',
+    ),
 };
 
 export function zodTransform<Input, Output>(

@@ -8,11 +8,16 @@ import type {ContextPage} from '../tools/ToolDefinition.js';
 import {
   FastActionExecutor,
   type ActionResult,
+  type BatchResultWithObservation,
   type ExecutionContext,
 } from './FastActionExecutor.js';
 import type {ActionItem} from './types.js';
 
-export {type ActionResult, type ExecutionContext};
+export {
+  type ActionResult,
+  type BatchResultWithObservation,
+  type ExecutionContext,
+};
 
 export class ActionExecutor {
   static async executeAction(
@@ -40,6 +45,22 @@ export class ActionExecutor {
         variables,
       },
       actions,
+    );
+  }
+
+  static async executeBatchWithObservation(
+    page: ContextPage,
+    actions: ActionItem[],
+    variables: Record<string, unknown> = {},
+    options?: {observeAfter?: boolean; limit?: number},
+  ): Promise<BatchResultWithObservation> {
+    return await FastActionExecutor.executeBatchWithObservation(
+      {
+        page,
+        variables,
+      },
+      actions,
+      options,
     );
   }
 }

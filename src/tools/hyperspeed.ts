@@ -51,6 +51,9 @@ function parseOutputMode(mode: unknown): OutputMode {
   if (mode === 'full') {
     return 'full';
   }
+  if (mode === 'dense') {
+    return 'dense';
+  }
   return 'compact';
 }
 
@@ -110,19 +113,31 @@ export const hyperAct: PageToolFactory = definePageTool(() => ({
   handler: async (request, response) => {
     const actions = zod.array(actionItemSchema).parse(request.params.actions);
     const mode = parseOutputMode(request.params.outputMode);
-    const results = await ActionExecutor.executeBatch(request.page, actions);
+    const batchRes = await ActionExecutor.executeBatchWithObservation(
+      request.page,
+      actions,
+      {},
+      {observeAfter: request.params.observeAfter},
+    );
+    const results = batchRes.results;
     const allSuccess = results.every(r => r.success);
     let page: string | undefined;
     let url: string | undefined;
     let elements: unknown = undefined;
     if (request.params.observeAfter) {
-      const observation = await ObservationEngine.observe(
-        request.page,
-        'minimal',
-      );
-      page = observation.title;
-      url = observation.url;
-      elements = observation.elements;
+      if (batchRes.observation) {
+        page = batchRes.observation.title;
+        url = batchRes.observation.url;
+        elements = batchRes.observation.elements;
+      } else {
+        const observation = await ObservationEngine.observe(
+          request.page,
+          'minimal',
+        );
+        page = observation.title;
+        url = observation.url;
+        elements = observation.elements;
+      }
     }
     const formatted = ResultFormatter.formatResult(
       {

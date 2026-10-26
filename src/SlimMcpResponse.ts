@@ -9,14 +9,32 @@ import {McpResponse} from './McpResponse.js';
 import type {TextContent, ImageContent} from './third_party/index.js';
 
 export class SlimMcpResponse extends McpResponse {
-  override async handle(_context: McpContext): Promise<{
+  override async handle(context: McpContext): Promise<{
     content: Array<TextContent | ImageContent>;
     structuredContent: object;
   }> {
     const error = this.error;
-    const responseText = error
-      ? [...this.responseLines, `Error: ${error.message}`].join('\n')
-      : this.responseLines.join('\n');
+    const lines = [...this.responseLines];
+    if (error) {
+      lines.push(`Error: ${error.message}`);
+    }
+    if (this.includePages) {
+      const allPages = context.getPages();
+      let selectedId: number | undefined;
+      try {
+        selectedId = context.getSelectedMcpPage().id;
+      } catch {
+        // none selected
+      }
+      lines.push('## Pages');
+      for (const p of allPages) {
+        const isSelected = p.id === selectedId;
+        lines.push(
+          `${isSelected ? '* ' : '  '}[${p.id}] ${p.url()} (${p.getTitle() || 'Untitled'})`,
+        );
+      }
+    }
+    const responseText = lines.join('\n');
     const content: Array<TextContent | ImageContent> = [];
     if (responseText.length > 0) {
       content.push({

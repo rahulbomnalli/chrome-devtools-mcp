@@ -194,6 +194,27 @@ describe('hyperspeed tools', () => {
       assert.strictEqual(elements[0]?.['ref'], '@0');
     });
 
+    it('supports dense output mode in hyper_act', async () => {
+      const {page, context, response, args} = createHandlerMocks();
+      page.pptrPage.evaluate.resolves([{success: true}]);
+
+      await hyperAct(args).handler(
+        {
+          params: {
+            actions: [{type: 'click', target: '#btn'}],
+            outputMode: 'dense',
+          },
+          page,
+        },
+        response,
+        context,
+      );
+
+      sinon.assert.calledOnce(response.appendResponseLine);
+      const arg = response.appendResponseLine.firstCall.args[0];
+      assert.ok(arg.includes('OK: 1 action(s) executed'));
+    });
+
     it('executes actions with action-complete wait policy without delay', async () => {
       const {page} = createHandlerMocks();
       const results = await FastActionExecutor.executeBatch(
@@ -252,6 +273,72 @@ describe('hyperspeed tools', () => {
     it('accepts string targets coerced to {css: str}', () => {
       const parsed = locatorSchema.parse('#search');
       assert.strictEqual(parsed.css, '#search');
+    });
+
+    it('executes micro-wait with delayMs in DOM batch', async () => {
+      const {page} = createHandlerMocks();
+      page.pptrPage.evaluate.resolves({results: [{success: true}]});
+      const res = await FastActionExecutor.executeAction(
+        {page, variables: {}},
+        {type: 'wait', delayMs: 10},
+      );
+      assert.strictEqual(res.success, true);
+    });
+
+    it('fuses action and observation in executeBatchWithObservation', async () => {
+      const {page} = createHandlerMocks();
+      page.pptrPage.evaluate.resolves({
+        results: [{success: true}],
+        observation: {
+          title: 'Page Title',
+          url: 'https://example.com',
+          elements: [{ref: '@0', tag: 'button', text: 'Go'}],
+        },
+      });
+
+      const res = await FastActionExecutor.executeBatchWithObservation(
+        {page, variables: {}},
+        [{type: 'click', target: {selector: '#btn'}}],
+        {observeAfter: true},
+      );
+      assert.strictEqual(res.results.length, 1);
+      assert.strictEqual(res.results[0]?.success, true);
+      assert.strictEqual(res.observation?.title, 'Page Title');
+      sinon.assert.calledOnce(page.pptrPage.evaluate);
+    });
+
+    it('resolves smart ascendant container when target is text', async () => {
+      const {page} = createHandlerMocks();
+      page.pptrPage.evaluate.resolves({results: [{success: true}]});
+
+      const res = await FastActionExecutor.executeAction(
+        {page, variables: {}},
+        {type: 'click', target: {text: 'Submit'}},
+      );
+      assert.strictEqual(res.success, true);
+    });
+  });
+
+  describe('ResultFormatter', () => {
+    it('formats dense token-minimized output', () => {
+      const text = ResultFormatter.formatResult(
+        {
+          ok: true,
+          pageId: 1,
+          page: 'Google',
+          url: 'https://google.com',
+          actionsExecuted: 2,
+          elements: [
+            {ref: '@0', tag: 'a', text: 'About', selector: 'a.about'},
+            {ref: '@1', tag: 'input', name: 'Search', selector: '#q'},
+          ],
+        },
+        'dense',
+      );
+      assert.ok(text.includes('[Page 1: "Google" | https://google.com]'));
+      assert.ok(text.includes('OK: 2 action(s) executed'));
+      assert.ok(text.includes('@0 a "About" (a.about)'));
+      assert.ok(text.includes('@1 input "Search" (#q)'));
     });
   });
 

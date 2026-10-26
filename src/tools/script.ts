@@ -18,6 +18,7 @@ import {
 import {ToolCategory} from './categories.js';
 import {
   defineTool,
+  optionalPageIdSchema,
   pageIdSchema,
   type Context,
   type Response,
@@ -47,7 +48,9 @@ export const evaluateScript: ToolFactory = defineTool(
                     'Targets a specific page by ID. Required when not evaluating in a service worker.',
                   ),
               }
-            : pageIdSchema
+            : cliArgs.fast
+              ? optionalPageIdSchema
+              : pageIdSchema
           : {}),
         function: zod
           .string()

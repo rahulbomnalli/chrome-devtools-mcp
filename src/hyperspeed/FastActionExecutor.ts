@@ -40,12 +40,34 @@ export interface DomActionSpec {
   scrollDeltaY?: number;
   assertionKind?: string;
   assertionExpected?: string;
+  delayMs?: number;
 }
 
 export interface DomActionResult {
   success: boolean;
   extracted?: unknown;
   error?: string;
+}
+
+export interface DomBatchPayload {
+  results: DomActionResult[];
+  observation?: {
+    title: string;
+    url: string;
+    elements: Array<{
+      ref?: string;
+      tag?: string;
+      role?: string;
+      name?: string;
+      text?: string;
+      value?: string;
+      selector?: string;
+    }>;
+  };
+}
+
+function isDomBatchPayload(val: unknown): val is DomBatchPayload {
+  return typeof val === 'object' && val !== null && 'results' in val;
 }
 
 function isDomAction(action: ActionItem): boolean {
@@ -67,7 +89,8 @@ function isDomAction(action: ActionItem): boolean {
     action.type === 'select' ||
     action.type === 'scroll' ||
     action.type === 'extract' ||
-    action.type === 'assert'
+    action.type === 'assert' ||
+    (action.type === 'wait' && action.delayMs !== undefined)
   );
 }
 
@@ -89,10 +112,14 @@ function toDomActionSpec(action: ActionItem): DomActionSpec {
     scrollDeltaY: action.scrollDeltaY,
     assertionKind: action.assertion?.kind,
     assertionExpected: action.assertion?.expected,
+    delayMs: action.delayMs,
   };
 }
 
-function runInPageDomBatch(specs: DomActionSpec[]): DomActionResult[] {
+async function runInPageDomBatch(
+  specs: DomActionSpec[],
+  options?: {observeAfter?: boolean; limit?: number},
+): Promise<DomBatchPayload> {
   function findEl(spec: DomActionSpec): Element | null {
     const sel = spec.selector || spec.css;
     if (sel) {
@@ -103,21 +130,40 @@ function runInPageDomBatch(specs: DomActionSpec[]): DomActionResult[] {
         const rawIdx = sel.replace(/^[@#]/, '');
         const idx = Number.parseInt(rawIdx, 10);
         if (Number.isInteger(idx)) {
+          const stashed = window.hyperspeedElements?.[idx];
+          if (stashed && stashed.isConnected) {
+            return stashed;
+          }
+          const isVis = (el: Element): boolean => {
+            if (
+              'checkVisibility' in el &&
+              typeof el.checkVisibility === 'function'
+            ) {
+              return el.checkVisibility({
+                checkOpacity: true,
+                checkVisibilityCSS: true,
+              });
+            }
+            const r = el.getBoundingClientRect();
+            return (
+              r.width > 0 &&
+              r.height > 0 &&
+              window.getComputedStyle(el).visibility !== 'hidden'
+            );
+          };
           const query =
             'button, a[href], input, select, textarea, ' +
             '[role="button"], [role="link"], [contenteditable="true"]';
-          const nodes = Array.from(document.querySelectorAll(query)).filter(
-            el => {
-              const r = el.getBoundingClientRect();
-              return (
-                r.width > 0 &&
-                r.height > 0 &&
-                window.getComputedStyle(el).visibility !== 'hidden'
-              );
-            },
-          );
-          if (nodes[idx]) {
-            return nodes[idx];
+          const allNodes = document.querySelectorAll(query);
+          const visibleNodes: Element[] = [];
+          for (let k = 0; k < allNodes.length; k++) {
+            const el = allNodes[k];
+            if (el && isVis(el)) {
+              visibleNodes.push(el);
+              if (visibleNodes.length > idx) {
+                return el;
+              }
+            }
           }
         }
       }
@@ -131,11 +177,19 @@ function runInPageDomBatch(specs: DomActionSpec[]): DomActionResult[] {
           const node = walker.currentNode;
           if (
             node instanceof Element &&
-            node.children.length === 0 &&
             node.textContent &&
             node.textContent.includes(targetText)
           ) {
-            return node;
+            const container = node.closest(
+              'button, a[href], input, select, textarea, ' +
+                '[role="button"], [role="link"], [contenteditable="true"]',
+            );
+            if (container) {
+              return container;
+            }
+            if (node.children.length === 0) {
+              return node;
+            }
           }
         }
       }
@@ -175,11 +229,19 @@ function runInPageDomBatch(specs: DomActionSpec[]): DomActionResult[] {
         const node = walker.currentNode;
         if (
           node instanceof Element &&
-          node.children.length === 0 &&
           node.textContent &&
           node.textContent.includes(spec.text)
         ) {
-          return node;
+          const container = node.closest(
+            'button, a[href], input, select, textarea, ' +
+              '[role="button"], [role="link"], [contenteditable="true"]',
+          );
+          if (container) {
+            return container;
+          }
+          if (node.children.length === 0) {
+            return node;
+          }
         }
       }
     }
@@ -396,6 +458,13 @@ function runInPageDomBatch(specs: DomActionSpec[]): DomActionResult[] {
         results.push({success: true});
         break;
       }
+      case 'wait': {
+        if (spec.delayMs && spec.delayMs > 0) {
+          await new Promise(r => setTimeout(r, spec.delayMs));
+        }
+        results.push({success: true});
+        break;
+      }
       default:
         results.push({
           success: false,
@@ -403,7 +472,148 @@ function runInPageDomBatch(specs: DomActionSpec[]): DomActionResult[] {
         });
     }
   }
-  return results;
+
+  let observation: DomBatchPayload['observation'] = undefined;
+  if (options?.observeAfter) {
+    const limit = options.limit ?? 25;
+    const isVisible = (el: Element): boolean => {
+      if ('checkVisibility' in el && typeof el.checkVisibility === 'function') {
+        return el.checkVisibility({
+          checkOpacity: true,
+          checkVisibilityCSS: true,
+        });
+      }
+      const rect = el.getBoundingClientRect();
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        window.getComputedStyle(el).visibility !== 'hidden'
+      );
+    };
+
+    // Micro-settle barrier for React 18 / Vue concurrent transitions
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 4);
+      });
+    });
+
+    const query =
+      'button, a[href], input, select, textarea, ' +
+      '[role="button"], [role="link"], [contenteditable="true"]';
+    const candidates: Element[] = [];
+    const collectFromRoot = (root: Document | ShadowRoot): void => {
+      const matches = root.querySelectorAll(query);
+      for (let i = 0; i < matches.length; i++) {
+        const el = matches[i];
+        if (el && isVisible(el)) {
+          candidates.push(el);
+        }
+      }
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (node instanceof Element && node.shadowRoot) {
+          collectFromRoot(node.shadowRoot);
+        }
+      }
+    };
+
+    collectFromRoot(document);
+
+    const inViewport: Element[] = [];
+    const outViewport: Element[] = [];
+    for (let i = 0; i < candidates.length; i++) {
+      const el = candidates[i];
+      if (!el) {
+        continue;
+      }
+      const r = el.getBoundingClientRect();
+      const onScreen =
+        r.top < window.innerHeight &&
+        r.bottom > 0 &&
+        r.left < window.innerWidth &&
+        r.right > 0;
+      if (onScreen) {
+        inViewport.push(el);
+      } else {
+        outViewport.push(el);
+      }
+    }
+
+    const visibleNodes = inViewport.concat(outViewport).slice(0, limit);
+    window.hyperspeedElements = visibleNodes;
+
+    const elements = visibleNodes.map((el, idx) => {
+      let sel = '';
+      const id = el.id;
+      if (id) {
+        sel = '#' + CSS.escape(id);
+      } else {
+        const name = el.getAttribute('name');
+        const placeholder = el.getAttribute('placeholder');
+        const ariaLabel = el.getAttribute('aria-label');
+        const tag = el.tagName.toLowerCase();
+        if (name) {
+          sel = `${tag}[name="${CSS.escape(name)}"]`;
+        } else if (placeholder) {
+          sel = `${tag}[placeholder="${CSS.escape(placeholder)}"]`;
+        } else if (ariaLabel) {
+          sel = `${tag}[aria-label="${CSS.escape(ariaLabel)}"]`;
+        } else if (
+          typeof el.className === 'string' &&
+          el.className.length > 0
+        ) {
+          const cls = el.className
+            .split(/\s+/)
+            .filter(
+              c =>
+                c.length > 0 &&
+                !c.includes(':') &&
+                !c.includes('/') &&
+                !c.includes('('),
+            )
+            .slice(0, 2)
+            .join('.');
+          if (cls.length > 0) {
+            sel = `${tag}.${cls}`;
+          }
+        }
+        if (sel.length === 0) {
+          sel = tag;
+        }
+      }
+      const role = el.getAttribute('role') || undefined;
+      const ariaLabel = el.getAttribute('aria-label');
+      const placeholder = el.getAttribute('placeholder');
+      const name =
+        ariaLabel || placeholder || el.getAttribute('name') || undefined;
+      const rawText = el.textContent || ariaLabel || placeholder || '';
+      const text = rawText.trim().replace(/\s+/g, ' ').slice(0, 40);
+      const val =
+        'value' in el && typeof el.value === 'string'
+          ? el.value.slice(0, 30)
+          : undefined;
+      const tag = el.tagName.toLowerCase();
+      return {
+        ref: `@${idx}`,
+        tag,
+        role: role !== tag ? role : undefined,
+        name: name !== text ? name : undefined,
+        text: text.length > 0 ? text : undefined,
+        value: val && val.length > 0 ? val : undefined,
+        selector: sel,
+      };
+    });
+
+    observation = {
+      title: document.title,
+      url: window.location.href,
+      elements,
+    };
+  }
+
+  return {results, observation};
 }
 
 export interface ExecutionContext {
@@ -454,7 +664,12 @@ export class FastActionExecutor {
       const tDomStart = performance.now();
       try {
         const spec = toDomActionSpec(action);
-        const [domRes] = await pptr.evaluate(runInPageDomBatch, [spec]);
+        const evalRaw = await pptr.evaluate(runInPageDomBatch, [spec]);
+        const domRes = Array.isArray(evalRaw)
+          ? evalRaw[0]
+          : isDomBatchPayload(evalRaw)
+            ? evalRaw.results[0]
+            : undefined;
         if (domRes?.success) {
           tracker.markAction(tDomStart, performance.now());
           await this.applyWaitPolicy(
@@ -765,6 +980,12 @@ export class FastActionExecutor {
           }
 
           case 'wait': {
+            if (action.delayMs !== undefined) {
+              const tWaitStart = performance.now();
+              await new Promise(r => setTimeout(r, action.delayMs));
+              tracker.markDomWait(tWaitStart, performance.now());
+              break;
+            }
             if (!action.condition) {
               throw new Error('wait action requires condition');
             }
@@ -1030,8 +1251,18 @@ export class FastActionExecutor {
     ctx: ExecutionContext,
     actions: ActionItem[],
   ): Promise<ActionResult[]> {
+    const res = await this.executeBatchWithObservation(ctx, actions);
+    return res.results;
+  }
+
+  static async executeBatchWithObservation(
+    ctx: ExecutionContext,
+    actions: ActionItem[],
+    options?: {observeAfter?: boolean; limit?: number},
+  ): Promise<BatchResultWithObservation> {
     const results: ActionResult[] = [];
     const pptr = ctx.page.pptrPage;
+    let observed: BatchResultWithObservation['observation'] = undefined;
 
     // Initialize page focus once at start of batch, never inside the loop
     await ctx.page.init({emulateFocus: true});
@@ -1070,11 +1301,29 @@ export class FastActionExecutor {
           }
         }
 
-        if (domSlice.length > 1) {
+        const isFinalSlice = j === actions.length;
+        const wantObserve = Boolean(options?.observeAfter && isFinalSlice);
+
+        if (domSlice.length > 1 || wantObserve) {
           const tBatchStart = performance.now();
           const specs = domSlice.map(toDomActionSpec);
           try {
-            const domResults = await pptr.evaluate(runInPageDomBatch, specs);
+            const evalRaw = await pptr.evaluate(
+              runInPageDomBatch,
+              specs,
+              wantObserve
+                ? {observeAfter: true, limit: options?.limit ?? 25}
+                : undefined,
+            );
+            const domResults = Array.isArray(evalRaw)
+              ? evalRaw
+              : isDomBatchPayload(evalRaw)
+                ? evalRaw.results
+                : [];
+            if (isDomBatchPayload(evalRaw) && evalRaw.observation) {
+              observed = evalRaw.observation;
+            }
+
             let sliceSuccess = true;
             for (let k = 0; k < domSlice.length; k++) {
               const act = domSlice[k];
@@ -1115,6 +1364,15 @@ export class FastActionExecutor {
       i++;
     }
 
-    return results;
+    return {results, observation: observed};
   }
+}
+
+export interface BatchResultWithObservation {
+  results: ActionResult[];
+  observation?: {
+    title: string;
+    url: string;
+    elements: unknown;
+  };
 }

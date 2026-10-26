@@ -31,6 +31,23 @@ export interface BrowserManagerOptions {
 function findActiveChromeWSEndpoint(): string | undefined {
   const home = os.homedir();
   const candidates = [
+    path.join(
+      home,
+      'AppData',
+      'Local',
+      'Google',
+      'Chrome',
+      'AutomationProfile',
+    ),
+    path.join(
+      home,
+      'AppData',
+      'Local',
+      'Google',
+      'Chrome',
+      'User Data',
+      'DevToolsProfile',
+    ),
     path.join(home, 'AppData', 'Local', 'Google', 'Chrome', 'User Data'),
     path.join(home, 'Library', 'Application Support', 'Google', 'Chrome'),
     path.join(home, '.config', 'google-chrome'),
@@ -56,6 +73,26 @@ function findActiveChromeWSEndpoint(): string | undefined {
     } catch {
       // Continue to next candidate
     }
+  }
+  return undefined;
+}
+
+async function probePort9222WSEndpoint(): Promise<string | undefined> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 300);
+    const res = await fetch('http://127.0.0.1:9222/json/version', {
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = (await res.json()) as {webSocketDebuggerUrl?: string};
+      if (data.webSocketDebuggerUrl) {
+        return data.webSocketDebuggerUrl;
+      }
+    }
+  } catch {
+    // Port not open, 404, or timed out
   }
   return undefined;
 }
@@ -239,7 +276,10 @@ export class BrowserManager {
     }
     // Auto-discover active running Chrome with user profile unless isolated or custom userDataDir
     if (!this.#config.resolved.isolated && !this.#config.resolved.userDataDir) {
-      const activeEndpoint = findActiveChromeWSEndpoint();
+      let activeEndpoint = await probePort9222WSEndpoint();
+      if (!activeEndpoint) {
+        activeEndpoint = findActiveChromeWSEndpoint();
+      }
       if (activeEndpoint) {
         try {
           const connected = await this.#connectToEndpoint(activeEndpoint);
@@ -274,22 +314,73 @@ export class BrowserManager {
         ? `chrome-profile-${channel}`
         : 'chrome-profile';
 
+    const home = os.homedir();
+    const automationProfileDir = path.join(
+      home,
+      'AppData',
+      'Local',
+      'Google',
+      'Chrome',
+      'AutomationProfile',
+    );
+    const realUserDataDir = path.join(
+      home,
+      'AppData',
+      'Local',
+      'Google',
+      'Chrome',
+      'User Data',
+    );
+
     let userDataDir = this.#config.resolved.userDataDir;
     if (!isolated && !userDataDir) {
-      userDataDir = path.join(
-        os.homedir(),
-        '.cache',
-        viaCli ? 'chrome-devtools-mcp-cli' : 'chrome-devtools-mcp',
-        profileDirName,
-      );
-      await fs.promises.mkdir(userDataDir, {
-        recursive: true,
-      });
+      if (os.platform() === 'win32' && fs.existsSync(realUserDataDir)) {
+        userDataDir = automationProfileDir;
+        if (!fs.existsSync(userDataDir)) {
+          fs.mkdirSync(userDataDir, {recursive: true});
+        }
+        const defaultJunction = path.join(userDataDir, 'Default');
+        const defaultUserSrc = path.join(realUserDataDir, 'Default');
+        if (!fs.existsSync(defaultJunction) && fs.existsSync(defaultUserSrc)) {
+          try {
+            execSync(
+              `cmd /c mklink /J "${defaultJunction}" "${defaultUserSrc}"`,
+              {
+                stdio: 'ignore',
+              },
+            );
+          } catch {
+            // best effort
+          }
+        }
+        const localStateSrc = path.join(realUserDataDir, 'Local State');
+        const localStateDest = path.join(userDataDir, 'Local State');
+        if (!fs.existsSync(localStateDest) && fs.existsSync(localStateSrc)) {
+          try {
+            fs.copyFileSync(localStateSrc, localStateDest);
+          } catch {
+            // best effort
+          }
+        }
+      } else {
+        userDataDir = path.join(
+          os.homedir(),
+          '.cache',
+          viaCli ? 'chrome-devtools-mcp-cli' : 'chrome-devtools-mcp',
+          profileDirName,
+        );
+        await fs.promises.mkdir(userDataDir, {
+          recursive: true,
+        });
+      }
     }
 
     const args: LaunchOptions['args'] = [
       ...(this.#config.resolved.chromeArg ?? []),
     ];
+    if (!isolated && userDataDir === automationProfileDir) {
+      args.push('--remote-debugging-port=9222', '--remote-allow-origins=*');
+    }
     if (proxyServer) {
       args.push(`--proxy-server=${proxyServer}`);
     }
@@ -366,6 +457,15 @@ export class BrowserManager {
         error instanceof Error &&
         error.message.includes('The browser is already running')
       ) {
+        const endpoint =
+          (await probePort9222WSEndpoint()) ?? findActiveChromeWSEndpoint();
+        if (endpoint) {
+          try {
+            return await this.#connectToEndpoint(endpoint);
+          } catch {
+            // fall through
+          }
+        }
         throw new Error(
           `The browser is already running for ${userDataDir}. Use --isolated to run multiple browser instances.`,
           {

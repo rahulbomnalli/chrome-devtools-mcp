@@ -21,10 +21,11 @@ export enum HyperErrorCode {
   UNKNOWN = 'UNKNOWN',
 }
 
-export type OutputMode = 'silent' | 'compact' | 'normal' | 'debug' | 'full';
+export type OutputMode =
+  'silent' | 'compact' | 'normal' | 'debug' | 'full' | 'dense';
 
 export const outputModeSchema: zod.ZodType<OutputMode> = zod
-  .enum(['silent', 'compact', 'normal', 'debug', 'full'])
+  .enum(['silent', 'compact', 'normal', 'debug', 'full', 'dense'])
   .default('compact');
 
 export interface LocatorTarget {
@@ -215,6 +216,7 @@ export interface ActionItem {
   waitPolicy?: WaitPolicy;
   waitUrl?: string;
   synthetic?: boolean;
+  delayMs?: number;
 }
 
 export const actionItemSchema: zod.ZodType<ActionItem> = zod.object({
@@ -238,6 +240,7 @@ export const actionItemSchema: zod.ZodType<ActionItem> = zod.object({
   waitPolicy: waitPolicySchema.optional(),
   waitUrl: zod.string().optional(),
   synthetic: zod.boolean().optional(),
+  delayMs: zod.number().optional(),
 });
 
 export interface WorkflowStep extends ActionItem {
