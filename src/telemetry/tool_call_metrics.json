@@ -1411,6 +1411,10 @@
       {
         "name": "output_mode",
         "argType": "string"
+      },
+      {
+        "name": "observe_after",
+        "argType": "boolean"
       }
     ]
   },

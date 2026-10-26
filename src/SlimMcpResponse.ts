@@ -29,9 +29,10 @@ export class SlimMcpResponse extends McpResponse {
       lines.push('## Pages');
       for (const p of allPages) {
         const isSelected = p.id === selectedId;
-        lines.push(
-          `${isSelected ? '* ' : '  '}[${p.id}] ${p.url()} (${p.getTitle() || 'Untitled'})`,
-        );
+        const title = p.getTitle();
+        const url = p.url();
+        const pageLabel = title ? `${title} (${url})` : url;
+        lines.push(`${p.id}: ${pageLabel}${isSelected ? ' [selected]' : ''}`);
       }
     }
     const responseText = lines.join('\n');

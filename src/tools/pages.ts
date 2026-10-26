@@ -152,12 +152,14 @@ export const newPage: ToolFactory = defineTool((args: ParsedArguments) => {
       );
 
       try {
+        const gotoOptions: {timeout?: number; waitUntil?: 'domcontentloaded'} =
+          {timeout: request.params.timeout};
+        if (args?.fast) {
+          gotoOptions.waitUntil = 'domcontentloaded';
+        }
         await page.waitForEventsAfterAction(
           async () => {
-            await page.pptrPage.goto(request.params.url, {
-              timeout: request.params.timeout,
-              waitUntil: args?.fast ? 'domcontentloaded' : undefined,
-            });
+            await page.pptrPage.goto(request.params.url, gotoOptions);
           },
           {timeout: request.params.timeout},
         );
@@ -234,10 +236,12 @@ export const navigatePage: PageToolFactory = definePageTool(
       verifyFilesSchema: {},
       handler: async (request, response) => {
         const page = request.page;
-        const options = {
+        const options: {timeout?: number; waitUntil?: 'domcontentloaded'} = {
           timeout: request.params.timeout,
-          waitUntil: args?.fast ? ('domcontentloaded' as const) : undefined,
         };
+        if (args?.fast) {
+          options.waitUntil = 'domcontentloaded';
+        }
 
         if (!request.params.type && !request.params.url) {
           throw new Error('Either URL or a type is required.');

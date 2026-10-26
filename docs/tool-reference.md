@@ -169,13 +169,14 @@
 
 ### `hyper_act`
 
-**Description:** PRIMARY HIGH-SPEED ACTION TOOL: Executes one or multiple browser actions (navigate, [`click`](#click), dblclick, [`fill`](#fill), type, [`press_key`](#press_key), [`hover`](#hover), scroll, select, check, upload, [`drag`](#drag), wait, extract, evaluate, assert, capture) in a single compound turn on the selected page. ALWAYS prefer submitting a batch of known actions in a single [`hyper_act`](#hyper_act) call instead of multiple separate tool calls or repeated observations to eliminate model round-trip latency.
+**Description:** PRIMARY HIGH-SPEED ACTION TOOL: Executes one or multiple browser actions (navigate, [`click`](#click), dblclick, [`fill`](#fill), type, [`press_key`](#press_key), [`hover`](#hover), scroll, select, check, upload, [`drag`](#drag), wait, extract, evaluate, assert, capture) in a single compound turn on the selected page. Targets can be CSS selectors, text="...", or @index refs from [`hyper_observe`](#hyper_observe). Set observeAfter=true to return the updated page elements in the same turn.
 
 **Parameters:**
 
 - **actions** (array) **(required)**: List of browser actions to execute sequentially.
 - **pageId** (number) **(required)**: Targets a specific page by ID.
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **observeAfter** (boolean) _(optional)_: If true, automatically scans and returns the updated page elements immediately after actions finish, eliminating an extra observation turn.
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 
 ---
 
@@ -192,7 +193,7 @@
 - **infiniteScroll** (boolean) _(optional)_
 - **maxItems** (number) _(optional)_
 - **maxPages** (number) _(optional)_
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 - **paginationSelector** (string) _(optional)_
 - **scrollRounds** (number) _(optional)_
 
@@ -271,7 +272,7 @@
 - **steps** (array) **(required)**: Workflow steps to execute.
 - **dryRun** (boolean) _(optional)_
 - **maxConcurrency** (number) _(optional)_
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 - **timeoutMs** (number) _(optional)_: Total plan timeout in ms.
 - **variables** (string) _(optional)_: JSON-formatted initial variable bindings.
 
@@ -285,7 +286,7 @@
 
 - **tasks** (array) **(required)**
 - **maxConcurrency** (number) _(optional)_
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 
 ---
 
@@ -297,7 +298,7 @@
 
 - **condition** (string) **(required)**: JSON-formatted wait condition configuration.
 - **pageId** (number) **(required)**: Targets a specific page by ID.
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 
 ---
 
@@ -460,7 +461,7 @@
 - **downloadPath** (string) **(required)**: Target download directory.
 - **pageId** (number) **(required)**: Targets a specific page by ID.
 - **expectedFilename** (string) _(optional)_
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 - **timeoutMs** (number) _(optional)_
 
 ---
@@ -474,7 +475,7 @@
 - **filePath** (string) **(required)**: Output file path for the export.
 - **pageId** (number) **(required)**: Targets a specific page by ID.
 - **methods** (array) _(optional)_
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 - **resourceTypes** (array) _(optional)_
 - **statusCodes** (array) _(optional)_
 - **urlPattern** (string) _(optional)_
@@ -489,7 +490,7 @@
 
 - **pageId** (number) **(required)**: Targets a specific page by ID.
 - **rules** (array) **(required)**
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 
 ---
 
@@ -502,7 +503,7 @@
 - **pageId** (number) **(required)**: Targets a specific page by ID.
 - **limit** (number) _(optional)_
 - **methods** (array) _(optional)_
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 - **resourceTypes** (array) _(optional)_
 - **statusCodes** (array) _(optional)_
 - **urlPattern** (string) _(optional)_
@@ -580,7 +581,7 @@ Results are paginated (10 rules per page by default); use pageIdx to page throug
 **Parameters:**
 
 - **pageId** (number) **(required)**: Targets a specific page by ID.
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 
 ---
 
@@ -592,7 +593,7 @@ Results are paginated (10 rules per page by default); use pageIdx to page throug
 
 - **pageId** (number) **(required)**: Targets a specific page by ID.
 - **limit** (number) _(optional)_
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 - **pattern** (string) _(optional)_
 - **types** (array) _(optional)_
 
@@ -606,7 +607,7 @@ Results are paginated (10 rules per page by default); use pageIdx to page throug
 
 - **pageId** (number) **(required)**: Targets a specific page by ID.
 - **domSelector** (string) _(optional)_
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 - **screenshotPath** (string) _(optional)_
 
 ---
@@ -620,7 +621,7 @@ Results are paginated (10 rules per page by default); use pageIdx to page throug
 - **pageId** (number) **(required)**: Targets a specific page by ID.
 - **filePath** (string) _(optional)_
 - **mode** (enum: "minimal", "semantic", "targeted", "diff", "full", "visual", "diagnostic") _(optional)_
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 - **target** (string) _(optional)_: Target CSS selector or JSON locator for targeted observation.
 
 ---
@@ -633,7 +634,7 @@ Results are paginated (10 rules per page by default); use pageIdx to page throug
 
 - **actionType** (enum: "dismissDialog", "reload", "reconnect") **(required)**
 - **pageId** (number) **(required)**: Targets a specific page by ID.
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 
 ---
 
@@ -643,7 +644,7 @@ Results are paginated (10 rules per page by default); use pageIdx to page throug
 
 **Parameters:**
 
-- **outputMode** (enum: "silent", "compact", "normal", "debug", "full") _(optional)_
+- **outputMode** (enum: "silent", "compact", "normal", "debug", "full", "dense") _(optional)_
 
 ---
 
